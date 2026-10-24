@@ -1,1 +1,1 @@
-"""Adapters implementing ports.sandbox.Sandbox."""
+"""Adapters implementing domain.sandbox.Sandbox."""

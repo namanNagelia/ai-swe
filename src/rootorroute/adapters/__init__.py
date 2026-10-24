@@ -1,1 +1,1 @@
-"""Adapters: one subpackage per port, one module per real system. Never import each other."""
+"""Adapters: one module per real system, implementing the domain ports."""

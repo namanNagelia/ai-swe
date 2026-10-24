@@ -1,1 +1,1 @@
-"""Adapters implementing ports.store.Store."""
+"""Adapters implementing domain.store.Store."""

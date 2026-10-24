@@ -6,8 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from rootorroute.core.errors import ToolNotAllowed
-from rootorroute.core.state import Phase
+from rootorroute.domain.errors import ToolNotAllowed
+from rootorroute.domain.state import Phase
 
 
 class SideEffect(StrEnum):
@@ -64,14 +64,13 @@ class FinishPlan(Args):
     summary: str = Field(
         min_length=1, description="One paragraph: the approach; used as PR title/intro."
     )
+    assumptions: list[str] = Field(
+        default_factory=list, description="Decisions made where the task was ambiguous."
+    )
 
 
 class FinishTicket(Args):
     summary: str = Field(min_length=1, description="What changed and why; used in the commit body.")
-
-
-class AskHuman(Args):
-    question: str = Field(min_length=1)
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,7 +102,6 @@ _SPECS = (
     ),
     ToolSpec("finish_plan", SideEffect.STATE, PLAN, FinishPlan, "End planning."),
     ToolSpec("finish_ticket", SideEffect.STATE, IMPLEMENT, FinishTicket, "Run checks and commit."),
-    ToolSpec("ask_human", SideEffect.STATE, BOTH, AskHuman, "Stop and ask a human a question."),
 )
 
 TOOLS: Mapping[str, ToolSpec] = MappingProxyType({s.name: s for s in _SPECS})

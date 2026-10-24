@@ -1,1 +1,1 @@
-"""Adapters implementing ports.model.ModelProvider."""
+"""Adapters implementing domain.model.ModelProvider."""

@@ -1,1 +1,1 @@
-"""Adapters implementing ports.workspace.Workspace."""
+"""Adapters implementing domain.workspace.Workspace."""

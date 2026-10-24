@@ -2,7 +2,7 @@ from collections.abc import Mapping
 from enum import StrEnum
 from types import MappingProxyType
 
-from rootorroute.core.errors import InvalidTransition
+from rootorroute.domain.errors import InvalidTransition
 
 
 class TaskState(StrEnum):
@@ -15,7 +15,7 @@ class TaskState(StrEnum):
 class BlockedReason(StrEnum):
     LIMIT = "limit"
     CHECKS_FAILING = "checks_failing"
-    NEEDS_HUMAN = "needs_human"
+    CANCELLED = "cancelled"
     ERROR = "error"
 
 

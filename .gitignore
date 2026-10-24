@@ -1,7 +1,6 @@
 # ── Private planning docs (local only) ─────────────────────────────
 .claude/docs/
 .claude/tickets/
-.claude/archive/
 .claude/settings.local.json
 .claude/worktrees/
 CLAUDE.local.md

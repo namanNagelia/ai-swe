@@ -1,1 +1,1 @@
-"""Adapters implementing ports.code_host.CodeHost."""
+"""Adapters implementing domain.code_host.CodeHost."""

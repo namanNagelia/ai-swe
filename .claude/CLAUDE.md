@@ -1,7 +1,8 @@
 # Root or Route
 
 An autonomous, open-source software engineer that runs 24/7 on its own Linux VM
-and works with any model (OpenAI-compatible servers incl. open-source models, or
+and works with any model (servers speaking the OpenAI Responses API, incl. open-source
+models via Ollama/vLLM, or
 Anthropic). You give it a task through the `rr task` CLI, a local web inbox, or an
 `@mention` on GitHub. It splits the task into small tickets, implements them one at
 a time in a worktree (reading, editing, running tests, restructuring), commits each,
@@ -9,8 +10,8 @@ and opens a PR. Its work leaves the VM only as PRs and comments.
 
 Current plan: the MVP in `.claude/docs/checkpoints/00-overview.md` (local only,
 gitignored). The older, larger design (ticket providers, judgment gate, system
-map, routing, benchmark) is archived in `.claude/archive/v0-plan/` and
-`.claude/docs/technical-design.md`; pieces come back after the MVP works.
+map, routing, benchmark) is in `.claude/docs/technical-design.md`; pieces may come
+back after the MVP works.
 
 ## Status
 
@@ -46,13 +47,15 @@ Ports: `ModelProvider` (fake, openai_compat, anthropic), `Store` (SQLite),
 ### Task states
 
 `queued → in_progress → done`, plus `blocked` (with a reason: `limit`,
-`checks_failing`, `needs_human`, `error`; retry returns it to `in_progress`).
+`checks_failing`, `cancelled`, `error`; retry returns it to `in_progress`).
+Fully autonomous: no tool asks a human anything; ambiguity is resolved by the
+agent and recorded as assumptions in the PR.
 Tickets inside a task are `todo → done`. Phases: `plan`, `implement`.
 
 ### Tools and side-effect classes
 
 `none` (read_file, list_files, search_code) · `local` (write_file, edit_file, shell) ·
-`state` (create_ticket, finish_plan, finish_ticket, ask_human). Plan phase gets
+`state` (create_ticket, finish_plan, finish_ticket). Plan phase gets
 read-only tools + planning tools. git commit/push, PRs and comments are done by the
 runtime (`external`), never exposed as tools.
 
@@ -89,9 +92,9 @@ These are the product. Do not weaken them.
 - Async I/O (`asyncio`) in the daemon.
 - SQLite via the stdlib `sqlite3` (WAL mode) unless there's a clear reason for an ORM.
 - Structured logging (JSON). Every log line carries `task_id` and `step`.
-- Ports and adapters: Protocols in `ports/`, one adapter module per real system in
-  `adapters/<port>/`, wiring only in `entrypoints/container.py`. import-linter
-  contracts in `pyproject.toml` enforce the layering (see Layout).
+- Three folders: `domain/` (rules + Protocols), `adapters/<port>/` (one module per
+  real system), `app/` (the agent). Wiring only in `main.py`. import-linter
+  contracts in `pyproject.toml` enforce it (see Layout).
 - Prefer fakes over mocks for providers (`FakeModelProvider`, `FakeCodeHost`).
   The owner is skipping tests during the MVP; don't add them unless asked.
 
@@ -107,20 +110,21 @@ src/rootorroute/cli.py      `rr` entry point (host side)
 src/rootorroute/vm/         Host-side VM management: backends (lima, multipass, ssh),
                             bundle packing, up/provision/backup/restore/rebuild
 
-Agent runtime, ports and adapters (imports only point downward):
-src/rootorroute/entrypoints/  agent (rr-agent daemon), config, container (wiring)
-src/rootorroute/adapters/     <port>/<system>.py: model (fake, openai_compat, anthropic,
-                              text_tools), store (sqlite), workspace (git), sandbox (rr_exec,
-                              local), code_host (github, fake), secrets (file, env,
-                              credential_helper), clock
-src/rootorroute/application/  agent (generic loop), prompts, planner, implementer, checks,
-                              limits, deliver, runner, audit, tools/ (executor, files,
-                              truncate, redact), intake/ (api, web, mentions)
-src/rootorroute/ports/        Protocols: model, store, workspace, sandbox, code_host,
-                              secrets, clock
-src/rootorroute/core/         pure domain: task, ticket, state, tools, errors
-  adapters and application never import each other; core/ports do no I/O and import
-  no SDKs; the runtime never imports vm/. Check: `uv run lint-imports`.
+Agent runtime: three folders, imports only point toward domain:
+src/rootorroute/domain/    The rules, pure Python, no I/O: task, ticket, state, tools (tool
+                           specs), errors, plus the Protocols the adapters implement:
+                           model, store, workspace, sandbox, code_host, secrets, clock
+src/rootorroute/adapters/  One module per real system: model (fake, openai_compat,
+                           anthropic, text_tools), store (sqlite), workspace (git), sandbox
+                           (rr_exec, local), code_host (github, fake), secrets (file, env,
+                           credential_helper), clock
+src/rootorroute/app/       The agent itself: agent (generic loop), prompts, planner,
+                           implementer, checks, limits, deliver, runner, audit, tools/
+                           (executor, files, truncate, redact), intake/ (api, web, mentions)
+src/rootorroute/main.py    rr-agent: builds adapters from config and starts the daemon
+src/rootorroute/config.py  Config schema (TOML)
+  app and adapters never import each other (main.py wires them); domain does no I/O and
+  imports no SDKs; the runtime never imports vm/. Check: `uv run lint-imports`.
 
 tests/                pytest. vm/ (FakeRunner, never a real VM), architecture/
                       (runs the import-linter contracts)
@@ -177,7 +181,7 @@ Add `--privileged` to also load the nftables rules and test egress.
 
 ## Don'ts
 
-- Don't commit anything from `.claude/docs/`, `.claude/archive/`, secrets, `.env`, `*.tfstate`, or
+- Don't commit anything from `.claude/docs/`, secrets, `.env`, `*.tfstate`, or
   `agent.db`.
 - Don't add a tool without a pydantic args model, a side-effect class, its phases,
   and an audit entry.

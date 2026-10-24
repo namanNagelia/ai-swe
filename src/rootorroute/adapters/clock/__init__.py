@@ -1,1 +1,1 @@
-"""Adapters implementing ports.clock.Clock."""
+"""Adapters implementing domain.clock.Clock."""
