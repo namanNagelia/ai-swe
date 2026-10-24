@@ -1,0 +1,15 @@
+[Unit]
+Description=Root or Route default-deny egress firewall
+DefaultDependencies=no
+After=local-fs.target
+Before=network-pre.target rr-tools.service rr-supervisor.service
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/rootorroute/egress/egress.nft
+ExecStop=/usr/sbin/nft delete table inet rootorroute_egress
+
+[Install]
+WantedBy=multi-user.target

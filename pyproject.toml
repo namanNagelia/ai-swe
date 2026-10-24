@@ -1,0 +1,88 @@
+[project]
+name = "rootorroute"
+version = "0.0.1"
+description = "An autonomous engineer that runs 24/7 on its own VM and decides whether to fix a ticket's root cause or route it to the team that owns it."
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.14.1",
+]
+
+[project.scripts]
+rr = "rootorroute.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.8", "pyright>=1.1.390", "import-linter>=2.1"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rootorroute"]
+
+# Ship the image so `pipx install rootorroute && rr vm up` works without a checkout.
+[tool.hatch.build.targets.wheel.force-include]
+"infra/image" = "rootorroute/_image"
+"infra/lima" = "rootorroute/_lima"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+
+# Ports and adapters, enforced. tests/architecture runs these on every pytest run.
+[tool.importlinter]
+root_package = "rootorroute"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layers point inward: entrypoints -> adapters | application -> ports -> core"
+type = "layers"
+layers = [
+    "rootorroute.entrypoints",
+    "rootorroute.adapters | rootorroute.application",
+    "rootorroute.ports",
+    "rootorroute.core",
+]
+
+[[tool.importlinter.contracts]]
+name = "Adapters for different ports never import each other"
+type = "independence"
+modules = [
+    "rootorroute.adapters.code_host",
+    "rootorroute.adapters.model",
+    "rootorroute.adapters.secrets",
+    "rootorroute.adapters.store",
+    "rootorroute.adapters.sandbox",
+    "rootorroute.adapters.workspace",
+    "rootorroute.adapters.clock",
+]
+
+[[tool.importlinter.contracts]]
+name = "Core and ports do no I/O and use no provider SDKs"
+type = "forbidden"
+source_modules = ["rootorroute.core", "rootorroute.ports"]
+forbidden_modules = [
+    "sqlite3", "subprocess", "socket", "http", "urllib",
+    "httpx", "requests", "anthropic", "openai", "github",
+]
+
+[[tool.importlinter.contracts]]
+name = "The agent runtime never imports host-side VM tooling"
+type = "forbidden"
+source_modules = [
+    "rootorroute.core", "rootorroute.ports", "rootorroute.application",
+    "rootorroute.adapters", "rootorroute.entrypoints",
+]
+forbidden_modules = ["rootorroute.vm", "rootorroute.cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

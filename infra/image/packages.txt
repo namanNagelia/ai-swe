@@ -1,0 +1,113 @@
+# OS packages installed on every agent VM (Ubuntu 24.04 apt names).
+# One per line; '#' starts a comment. Add to this file to change the image,
+# or pass one-off extras with `rr vm up --package NAME`.
+# Pinned toolchains (Node, Go, uv, gh, Playwright) live in manifest.env.
+
+# ── Required by the image itself (don't remove) ──
+acl
+apparmor
+ca-certificates
+curl
+dbus-user-session
+gnupg
+jq
+nftables
+slirp4netns
+sudo
+tinyproxy
+uidmap
+xz-utils
+
+# ── Build essentials ──
+build-essential
+cmake
+pkg-config
+autoconf
+automake
+libtool
+libssl-dev
+libffi-dev
+zlib1g-dev
+protobuf-compiler
+
+# ── Languages and package managers ──
+# Node, Go, Rust, Bun, Deno and uv are pinned in manifest.env instead.
+python3
+python3-venv
+python3-pip
+python3-dev
+pipx
+# C / C++
+clang
+clang-format
+clang-tidy
+lldb
+ninja-build
+meson
+valgrind
+# JVM
+openjdk-21-jdk-headless
+maven
+# Ruby
+ruby-full
+ruby-bundler
+# PHP
+php-cli
+php-curl
+php-mbstring
+php-xml
+php-sqlite3
+php-zip
+composer
+# .NET
+dotnet-sdk-8.0
+
+# ── Source control and code search ──
+git
+git-lfs
+ripgrep
+fd-find
+universal-ctags
+patch
+diffutils
+
+# ── Everyday shell tools ──
+bash-completion
+less
+tree
+file
+fzf
+bat
+tmux
+htop
+procps
+lsof
+rsync
+wget
+zip
+unzip
+p7zip-full
+yq
+moreutils
+parallel
+shellcheck
+vim-tiny
+nano
+
+# ── Networking and debugging ──
+dnsutils
+iputils-ping
+netcat-openbsd
+iproute2
+openssh-client
+strace
+gdb
+
+# ── Databases and service clients (for testbed stacks) ──
+sqlite3
+postgresql-client
+redis-tools
+mysql-client
+
+# ── Text-mode web browsing (headless Chromium is installed separately) ──
+w3m

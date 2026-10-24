@@ -1,0 +1,9 @@
+# Ubuntu 24.04 restricts unprivileged user namespaces, which Chromium's sandbox
+# needs. Allow them for the Playwright browsers only, so they run sandboxed.
+abi <abi/4.0>,
+include <tunables/global>
+
+/opt/rootorroute/browsers/**/{chrome,headless_shell,chrome-headless-shell} flags=(unconfined) {
+  userns,
+  include if exists <local/opt.rootorroute.browsers>
+}

@@ -1,0 +1,28 @@
+#!/usr/sbin/nft -f
+# Default-deny egress for the agent (@AGENT_UID@) and sandbox (@EXEC_UID@) users.
+# They may only talk to loopback, which is where the allowlisting proxy listens.
+# Other users (root, the admin user, apt) are unaffected.
+
+table inet rootorroute_egress {}
+flush table inet rootorroute_egress
+
+table inet rootorroute_egress {
+	set sandboxed_uids {
+		type uid
+		elements = { @AGENT_UID@, @EXEC_UID@ }
+	}
+
+	chain output {
+		type filter hook output priority filter; policy accept;
+
+		meta skuid != @sandboxed_uids accept
+
+		# No direct DNS: the proxy resolves names, so DNS can't be used to exfiltrate.
+		udp dport 53 counter reject
+		tcp dport 53 counter reject
+
+		oifname "lo" accept
+
+		counter reject with icmpx admin-prohibited
+	}
+}

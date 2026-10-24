@@ -1,0 +1,33 @@
+# Egress allowlist, used only in `--egress allowlist` mode (the default is open).
+# One extended regex per line, matched against the destination host by tinyproxy.
+# Extra hosts (e.g. your Jira or secrets manager) are passed with
+# `rr vm up --allow-domain HOST` and compiled in alongside these.
+
+# Model API
+^api\.anthropic\.com$
+
+# Code host
+^github\.com$
+^api\.github\.com$
+^codeload\.github\.com$
+^uploads\.github\.com$
+^objects\.githubusercontent\.com$
+^raw\.githubusercontent\.com$
+^release-assets\.githubusercontent\.com$
+
+# Package mirrors
+^pypi\.org$
+^files\.pythonhosted\.org$
+^registry\.npmjs\.org$
+^proxy\.golang\.org$
+^sum\.golang\.org$
+^storage\.googleapis\.com$
+^repo1\.maven\.org$
+^repo\.maven\.apache\.org$
+
+# Container images for the local testbed stack
+^registry-1\.docker\.io$
+^auth\.docker\.io$
+^production\.cloudflare\.docker\.com$
+^ghcr\.io$
+^pkg-containers\.githubusercontent\.com$

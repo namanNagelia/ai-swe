@@ -1,0 +1,27 @@
+# Lima template for the Root or Route agent VM (macOS and Linux hosts).
+# Rendered by `rr vm up --backend lima`, which fills in the sizing placeholders.
+
+images:
+  - location: "https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
+  - location: "https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+
+cpus: @CPUS@
+memory: "@MEMORY@GiB"
+disk: "@DISK@GiB"
+
+# The VM is a sandbox: never share the host's files or SSH agent with it.
+mounts: []
+ssh:
+  forwardAgent: false
+
+# Don't auto-forward guest ports to the host; the testbed's services stay inside.
+portForwards:
+  - guestPortRange: [1, 65535]
+    ignore: true
+
+# The image installs its own (rootless) Docker; skip Lima's containerd.
+containerd:
+  system: false
+  user: false

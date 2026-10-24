@@ -1,0 +1,7 @@
+# rootorroute-begin (managed by provision.sh)
+RUSTUP_HOME=/opt/rust/rustup
+PLAYWRIGHT_BROWSERS_PATH=/opt/rootorroute/browsers
+COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+DOTNET_CLI_TELEMETRY_OPTOUT=1
+DOTNET_NOLOGO=1
+# rootorroute-end

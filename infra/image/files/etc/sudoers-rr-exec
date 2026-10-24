@@ -1,0 +1,3 @@
+# The agent may run commands as the rr-exec sandbox user, and nothing else.
+# rr-exec cannot read agent state, logs, or the tool server's memory.
+agent ALL=(rr-exec) NOPASSWD: ALL

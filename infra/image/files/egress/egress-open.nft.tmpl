@@ -1,0 +1,47 @@
+#!/usr/sbin/nft -f
+# Open egress for the agent (@AGENT_UID@) and sandbox (@EXEC_UID@) users: the
+# whole internet, like a developer's laptop. Two things stay off-limits:
+#   - private and link-local networks, so the agent can't reach the host, your
+#     LAN, or the cloud metadata endpoint (169.254.169.254) that hands out creds;
+#   - nothing else. Every new outbound connection is logged to the journal
+#     (`journalctl -k --grep rr-egress`) for the audit trail.
+# Other users (root, the admin user, apt) are unaffected.
+
+table inet rootorroute_egress {}
+flush table inet rootorroute_egress
+
+table inet rootorroute_egress {
+	set sandboxed_uids {
+		type uid
+		elements = { @AGENT_UID@, @EXEC_UID@ }
+	}
+
+	set private_v4 {
+		type ipv4_addr
+		flags interval
+		elements = { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, 169.254.0.0/16 }
+	}
+
+	set private_v6 {
+		type ipv6_addr
+		flags interval
+		elements = { fc00::/7, fe80::/10 }
+	}
+
+	chain output {
+		type filter hook output priority filter; policy accept;
+
+		meta skuid != @sandboxed_uids accept
+		oifname "lo" accept
+
+		# DNS to the VM's resolver is fine even when it sits on a private address
+		# (Lima, Multipass and cloud VPC resolvers all do; rootless Docker uses it).
+		meta l4proto { tcp, udp } th dport 53 accept
+
+		ip daddr @private_v4 counter reject with icmpx admin-prohibited
+		ip6 daddr @private_v6 counter reject with icmpx admin-prohibited
+
+		ct state new log prefix "rr-egress: " level info
+		accept
+	}
+}
