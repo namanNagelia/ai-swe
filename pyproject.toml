@@ -4,9 +4,11 @@ version = "0.0.1"
 description = "An autonomous engineer that runs 24/7 on its own VM and decides whether to fix a ticket's root cause or route it to the team that owns it."
 requires-python = ">=3.12"
 dependencies = [
+    "aiosqlite>=0.22.1",
     "anthropic>=2.3.0",
     "httpx>=0.28.1",
     "pydantic>=2.14.1",
+    "sqlalchemy[asyncio]>=2.1.6",
 ]
 
 [project.scripts]
@@ -73,7 +75,7 @@ type = "forbidden"
 source_modules = ["rootorroute.domain"]
 forbidden_modules = [
     "sqlite3", "subprocess", "socket", "http", "urllib",
-    "httpx", "requests", "anthropic", "openai", "github",
+    "httpx", "requests", "anthropic", "openai", "github", "sqlalchemy", "aiosqlite",
 ]
 
 [[tool.importlinter.contracts]]

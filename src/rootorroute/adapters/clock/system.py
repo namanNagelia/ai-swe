@@ -1,3 +1,6 @@
-"""SystemClock: real wall-clock time."""
+from datetime import UTC, datetime
 
-# TODO (RR-0102)
+
+class SystemClock:
+    def now(self) -> datetime:
+        return datetime.now(UTC)

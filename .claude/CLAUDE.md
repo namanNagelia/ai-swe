@@ -41,7 +41,7 @@ fresh context (task, plan, summaries of finished tickets, this ticket), run the
 repo's checks on `finish_ticket`, commit → **deliver** (push, open PR, reply to source).
 
 Our own agent SDK: model port + tools + one generic loop, no vendor agent framework.
-Ports: `ModelProvider` (fake, openai_compat, anthropic), `Store` (SQLite),
+Ports: `ModelProvider` (openai_compat, anthropic), `Store` (SQLite),
 `Workspace` (git), `Sandbox` (rr-exec), `CodeHost` (GitHub), `Secrets`.
 
 ### Task states
@@ -90,13 +90,16 @@ These are the product. Do not weaken them.
 - Type hints everywhere; `pydantic` for tool schemas and config; `ruff` for lint
   and format; `pyright` (strict on core packages); `pytest` for tests.
 - Async I/O (`asyncio`) in the daemon.
-- SQLite via the stdlib `sqlite3` (WAL mode) unless there's a clear reason for an ORM.
+- SQLite through SQLAlchemy 2 (async, `aiosqlite`, WAL). The schema is the typed models in
+  `adapters/store/tables.py`; `SqliteStore.open()` creates it with `create_all`. Change a
+  table by changing its model (no migrations tool yet: until there is one, a new column
+  on an existing db needs a manual `ALTER TABLE` or a fresh `agent.db`).
 - Structured logging (JSON). Every log line carries `task_id` and `step`.
 - Three folders: `domain/` (rules + Protocols), `adapters/<port>/` (one module per
   real system), `app/` (the agent). Wiring only in `main.py`. import-linter
   contracts in `pyproject.toml` enforce it (see Layout).
-- Prefer fakes over mocks for providers (`FakeModelProvider`, `FakeCodeHost`).
-  The owner is skipping tests during the MVP; don't add them unless asked.
+- No tests and no fake adapters during the MVP (owner's call); don't add them unless
+  asked. Verify by running against real systems.
 
 ## Layout
 
@@ -114,9 +117,9 @@ Agent runtime: three folders, imports only point toward domain:
 src/rootorroute/domain/    The rules, pure Python, no I/O: task, ticket, state, tools (tool
                            specs), errors, plus the Protocols the adapters implement:
                            model, store, workspace, sandbox, code_host, secrets, clock
-src/rootorroute/adapters/  One module per real system: model (fake, openai_compat,
+src/rootorroute/adapters/  One module per real system: model (openai_compat,
                            anthropic, text_tools), store (sqlite), workspace (git), sandbox
-                           (rr_exec, local), code_host (github, fake), secrets (file, env,
+                           (rr_exec, local), code_host (github), secrets (file, env,
                            credential_helper), clock
 src/rootorroute/app/       The agent itself: agent (generic loop), prompts, planner,
                            implementer, checks, limits, deliver, runner, audit, tools/

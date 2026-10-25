@@ -1,3 +1,6 @@
-"""Clock: injectable time for limits, retries and backoff."""
+from datetime import datetime
+from typing import Protocol
 
-# TODO (RR-0102)
+
+class Clock(Protocol):
+    def now(self) -> datetime: ...
