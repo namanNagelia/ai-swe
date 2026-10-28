@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Root or Route</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1c1c1a; --muted: #6b6b66;
+    --line: #e2e2dd; --accent: #2f6f4f; --warn: #a3471f; --code: #f0f0ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151614; --panel: #1d1f1c; --text: #e8e8e3; --muted: #9a9a92;
+      --line: #2e302c; --accent: #6fbf8f; --warn: #e08a5f; --code: #232521;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  header { padding: 14px 20px; border-bottom: 1px solid var(--line); font-weight: 600; }
+  main { display: grid; grid-template-columns: minmax(300px, 420px) 1fr; gap: 16px; padding: 16px; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
+  h3 { margin: 14px 0 6px; font-size: 14px; }
+  label { display: block; margin: 8px 0 4px; color: var(--muted); font-size: 12px; }
+  select, textarea, input, button { font: inherit; color: inherit; }
+  select, textarea, input { width: 100%; padding: 7px 8px; border: 1px solid var(--line);
+                            border-radius: 6px; background: var(--bg); }
+  textarea { min-height: 110px; resize: vertical; }
+  button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px;
+           background: var(--bg); cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; margin-top: 10px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .err { color: var(--warn); min-height: 1.2em; margin-top: 6px; }
+  ul.tasks { list-style: none; margin: 0; padding: 0; }
+  ul.tasks li { padding: 8px; border-top: 1px solid var(--line); cursor: pointer; }
+  ul.tasks li:hover, ul.tasks li.sel { background: var(--bg); }
+  .row { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .muted { color: var(--muted); }
+  .badge { font-size: 11px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line); }
+  .s-done { color: var(--accent); border-color: var(--accent); }
+  .s-blocked { color: var(--warn); border-color: var(--warn); }
+  .preview { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  pre { white-space: pre-wrap; margin: 0; }
+  .log { background: var(--code); border-radius: 6px; padding: 8px; max-height: 420px; overflow: auto;
+         font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>Root or Route <span class="muted">inbox</span></header>
+<main>
+  <div>
+    <section>
+      <h2>New task</h2>
+      <form id="new">
+        <label for="repo">Repository</label>
+        <select id="repo" required></select>
+        <label for="prompt">What should it do?</label>
+        <textarea id="prompt" required></textarea>
+        <label for="base">Base branch (optional)</label>
+        <input id="base" placeholder="repo default">
+        <button class="primary" type="submit">Queue task</button>
+        <div class="err" id="new-err"></div>
+      </form>
+    </section>
+    <section style="margin-top:16px">
+      <h2>Tasks</h2>
+      <ul class="tasks" id="tasks"></ul>
+    </section>
+  </div>
+  <section id="detail"><p class="muted">Select a task.</p></section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let selected = null, source = null;
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "on") for (const [ev, fn] of Object.entries(v)) node.addEventListener(ev, fn);
+    else node.setAttribute(k, v);
+  }
+  for (const c of children) if (c != null) node.append(c);
+  return node;
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error || res.statusText);
+  return body;
+}
+
+function badge(t) {
+  const text = t.state === "blocked" && t.blocked_reason ? `blocked: ${t.blocked_reason}` : t.state;
+  return el("span", { class: `badge s-${t.state}` }, text);
+}
+
+function prLink(url) {
+  return url && url.startsWith("https://") ? el("a", { href: url, target: "_blank", rel: "noopener" }, "PR") : null;
+}
+
+async function loadConfig() {
+  const { repos } = await api("/config");
+  $("repo").replaceChildren(...repos.map((r) => el("option", { value: r }, r)));
+}
+
+async function loadTasks() {
+  const tasks = await api("/tasks?limit=50");
+  $("tasks").replaceChildren(...tasks.map((t) => el("li",
+    { class: t.id === selected ? "sel" : "", on: { click: () => select(t.id) } },
+    el("div", { class: "row" }, badge(t), el("span", { class: "muted" }, t.repo), prLink(t.pr_url)),
+    el("div", { class: "preview" }, t.prompt))));
+}
+
+async function action(id, verb) {
+  try { await api(`/tasks/${id}/${verb}`, { method: "POST" }); } catch (e) { alert(e.message); }
+  await Promise.all([loadTasks(), showDetail(id)]);
+  if (verb === "retry") follow(id);
+}
+
+async function showDetail(id) {
+  const t = await api(`/tasks/${encodeURIComponent(id)}`);
+  if (id !== selected) return;
+  const canCancel = t.state === "queued" || t.state === "in_progress";
+  const old = $("log");
+  const log = old || el("div", { class: "log", id: "log" });
+  $("detail").replaceChildren(
+    el("div", { class: "row" }, el("strong", {}, t.id), badge(t), el("span", { class: "muted" }, t.repo),
+       t.base_branch ? el("span", { class: "muted" }, `← ${t.base_branch}`) : null, prLink(t.pr_url)),
+    el("pre", { style: "margin-top:10px" }, t.prompt),
+    t.branch ? el("div", { class: "muted" }, `branch ${t.branch}`) : null,
+    el("div", { class: "row", style: "margin-top:10px" },
+       el("button", canCancel ? { on: { click: () => action(id, "cancel") } } : { disabled: "" }, "Cancel"),
+       el("button", t.state === "blocked" ? { on: { click: () => action(id, "retry") } } : { disabled: "" }, "Retry")),
+    t.plan_summary ? el("div", {}, el("h3", {}, "Plan"), el("pre", {}, t.plan_summary)) : null,
+    t.tickets.length ? el("div", {}, el("h3", {}, "Tickets"),
+      ...t.tickets.map((k) => el("div", {}, `${k.status === "done" ? "✅" : "⬜"} ${k.seq}. ${k.title}`))) : null,
+    t.assumptions.length ? el("div", {}, el("h3", {}, "Assumptions"),
+      el("ul", {}, ...t.assumptions.map((a) => el("li", {}, a)))) : null,
+    el("h3", {}, "Events"), log);
+}
+
+function summarize(e) {
+  const p = e.payload || {};
+  switch (e.kind) {
+    case "state": return `${p.from || "new"} → ${p.to}${p.reason ? ` (${p.reason})` : ""}`;
+    case "plan": return p.title ? `ticket ${p.seq}: ${p.title}` : "plan finished";
+    case "ticket": return `ticket ${p.seq} ${p.status}`;
+    case "tool_call": {
+      const req = p.request || {}, res = p.response || {};
+      const name = req.name || req.tool || "tool";
+      const ok = res.ok === false || res.error ? "err" : "ok";
+      return `${name} ${ok}`;
+    }
+    case "model_call": return `step ${p.step} (${p.phase}${p.ticket ? ` #${p.ticket}` : ""}) tokens ${(p.tokens || []).join("/")}`;
+    case "external": return `${p.key}`;
+    default: return JSON.stringify(p).slice(0, 200);
+  }
+}
+
+function follow(id) {
+  if (source) source.close();
+  $("log").replaceChildren();
+  source = new EventSource(`/tasks/${encodeURIComponent(id)}/events?follow=1`);
+  source.onmessage = (m) => {
+    const e = JSON.parse(m.data), log = $("log");
+    if (!log) return;
+    const time = new Date(e.at).toLocaleTimeString();
+    log.append(el("div", {}, `${time}  ${e.kind.padEnd(10)} ${summarize(e)}`));
+    log.scrollTop = log.scrollHeight;
+  };
+  source.addEventListener("end", () => { source.close(); source = null; showDetail(id); loadTasks(); });
+}
+
+async function select(id) {
+  selected = id;
+  $("detail").replaceChildren();
+  await Promise.all([showDetail(id), loadTasks()]);
+  follow(id);
+}
+
+$("new").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  $("new-err").textContent = "";
+  const body = { repo: $("repo").value, prompt: $("prompt").value, source: "web" };
+  if ($("base").value.trim()) body.base_branch = $("base").value.trim();
+  try {
+    const t = await api("/tasks", { method: "POST", body: JSON.stringify(body) });
+    $("prompt").value = ""; $("base").value = "";
+    await select(t.id);
+  } catch (e) { $("new-err").textContent = e.message; }
+});
+
+loadConfig().catch((e) => { $("new-err").textContent = e.message; });
+loadTasks();
+setInterval(() => { loadTasks(); if (selected) showDetail(selected); }, 5000);
+</script>
+</body>
+</html>

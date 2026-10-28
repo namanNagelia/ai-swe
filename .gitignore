@@ -17,6 +17,8 @@ CLAUDE.local.md
 id_rsa*
 id_ed25519*
 secrets/
+# ...but not the source package that reads secrets at runtime.
+!src/rootorroute/adapters/secrets/
 *.secret
 *.secrets
 github-app-*.pem

@@ -1,3 +1,13 @@
-"""Secrets: fetch a secret by name at call time."""
+from typing import Protocol
 
-# TODO (RR-0601)
+
+class SecretMissing(Exception):
+    def __init__(self, name: str) -> None:
+        super().__init__(f"secret {name!r} is not set")
+        self.name = name
+
+
+class Secrets(Protocol):
+    def get(self, name: str) -> str:
+        """Read a secret at call time. Raises SecretMissing."""
+        ...

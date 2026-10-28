@@ -1,0 +1,49 @@
+# rr-agent config. Install it with `rr vm deploy --config this-file.toml`; it lands at
+# /etc/rootorroute/config.toml (root:agent 0640). Secrets never go in this file: set them
+# with `rr vm secrets set NAME` and refer to them by name.
+
+[model]
+# OpenAI, or any server that speaks the OpenAI Responses API.
+provider = "openai_compat"
+model = "gpt-5"
+base_url = "https://api.openai.com/v1"
+api_key_secret = "model_api_key"      # rr vm secrets set model_api_key
+# tool_mode = "text"                  # for models without native tool calling
+
+# Anthropic instead:
+# provider = "anthropic"
+# model = "claude-opus-4-1"
+# api_key_secret = "model_api_key"
+# effort = "high"                     # low | medium | high | xhigh | max
+
+# Ollama (or vLLM) running inside the VM: no key needed.
+# provider = "openai_compat"
+# model = "qwen3-coder"
+# base_url = "http://127.0.0.1:11434/v1"
+# api_key_secret = ""                 # empty: send no key
+
+[github]
+bot_login = "my-rr-bot"               # the account the PAT belongs to
+repos = ["my-org/my-repo"]
+token_secret = "github_token"         # rr vm secrets set github_token
+# author_name = "Root or Route"       # default: bot_login
+# author_email = "bot@example.com"    # default: <bot_login>@users.noreply.github.com
+# mentions = true                     # pick up @bot_login mentions on these repos
+# poll_seconds = 60                   # >= 15
+
+# Defaults shown; a task that hits one is blocked with reason `limit`.
+[limits]
+# max_steps_per_ticket = 80
+# max_steps_per_task = 500
+# max_tokens_per_task = 6000000
+# max_hours_per_task = 6
+# max_tickets = 15
+# check_failures_per_ticket = 3
+
+[runtime]
+# home = "/home/agent"
+# sandbox = "rr_exec"                 # rr_exec | local (local only for development)
+# secrets = "file"                    # file: /home/agent/state/secrets/NAME | env
+# host = "127.0.0.1"                  # web inbox and API; reach it with `rr vm tunnel`
+# port = 8765
+# concurrency = 1

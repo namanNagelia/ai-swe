@@ -16,7 +16,7 @@ def test_bundle_contains_provisioner_and_manifest() -> None:
     assert "packages.txt" in members
     assert "files/egress/egress-open.nft.tmpl" in members
     assert "files/egress/egress-allowlist.nft.tmpl" in members
-    assert "files/systemd/rr-tools.service" in members
+    assert "files/systemd/rr-agent.service" in members
 
 
 def test_bundle_modes_and_owners_are_normalized() -> None:

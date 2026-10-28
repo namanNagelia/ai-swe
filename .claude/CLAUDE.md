@@ -15,7 +15,9 @@ back after the MVP works.
 
 ## Status
 
-Pre-v0. The VM layer is done; the agent runtime is being built from the MVP plan.
+MVP built and verified end to end (locally and on a Lima VM with a mocked model and
+GitHub). Not yet run against a real model or real GitHub. Open: RR-0803 (review comments
+push to the PR's own branch; today a mention on a PR opens a PR into that branch).
 
 ### How work is planned
 - **Checkpoints** (`.claude/docs/checkpoints/NN-*.md`): one spec per area, in build
@@ -141,9 +143,12 @@ tests/                pytest. vm/ (FakeRunner, never a real VM), architecture/
   from apt (packages.txt): Java 21 + Maven, Ruby + Bundler, PHP + Composer, .NET 8,
   clang/C++, cmake/ninja/meson. Toolchain env vars live in `/etc/environment`.
 - `agent` user (no sudo) runs `rr-agent`; owns `/home/agent`.
-- `rr-exec` sandbox user runs shell-tool commands. `agent` may `sudo -u rr-exec`
-  and nothing else. `rr-exec` can write `worktrees/` and `repos/` (group `rrwork`)
-  but cannot read `state/`, `memory/`, `logs/`, `cache/`.
+- `rr-exec` sandbox user runs shell-tool commands and every git command in a task's
+  working copy. `agent` may `sudo -u rr-exec` and nothing else. `rr-exec` can write
+  `worktrees/` (group `rrwork`) but cannot read `repos/`, `state/`, `memory/`, `logs/`,
+  `cache/`. The agent never runs git in a directory `rr-exec` can write: it fetches and
+  pushes in the agent-only mirrors under `repos/`, and takes the sandbox's commits in as
+  a git bundle.
 - Egress for both users (`--egress`, recorded in `/etc/rootorroute/egress/mode`):
   - `open` (default): full internet incl. DNS; private and link-local ranges
     rejected; new connections logged (`journalctl -k --grep rr-egress`).
@@ -173,6 +178,18 @@ shellcheck -x infra/image/provision.sh
 uv run rr vm up [--memory 16] [--egress allowlist --allow-domain jira.example.com]
 uv run rr vm provision --ssh ubuntu@host                           # any Ubuntu 24.04 box
 uv run rr vm status | shell --as agent | backup | restore | rebuild | destroy
+
+# Run the agent on the VM
+uv run rr vm secrets set github_token     # prompts; value goes over stdin only
+uv run rr vm secrets set model_api_key
+uv run rr vm deploy --config my-config.toml   # see infra/config.example.toml
+uv run rr task "add retries to the client" --repo owner/name [--base BRANCH]
+uv run rr tasks | show ID | logs ID -f | cancel ID | retry ID
+uv run rr vm tunnel                       # web inbox at http://localhost:8765
+
+# Run the agent locally (no VM): runtime.sandbox="local", secrets="env" in the config,
+# RR_SECRET_MODEL_API_KEY / RR_SECRET_GITHUB_TOKEN in the env, then
+uv run rr-agent --config local.toml       # and RR_API=http://127.0.0.1:8765 uv run rr task ...
 ```
 
 Note: `rr-exec` has no login shell by design; run as it with `sudo -u rr-exec bash -c '...'`

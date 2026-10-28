@@ -1,0 +1,29 @@
+[Unit]
+Description=Root or Route agent (task queue, runner, local API, GitHub mentions)
+Requires=rr-egress.service network-online.target
+After=rr-egress.service network-online.target tinyproxy.service
+# Inert until `rr vm deploy` installs the package and a config.
+ConditionPathExists=/opt/rootorroute/venv/bin/rr-agent
+ConditionPathExists=/etc/rootorroute/config.toml
+
+[Service]
+User=agent
+Group=agent
+EnvironmentFile=/etc/rootorroute/agent.env
+ExecStart=/opt/rootorroute/venv/bin/rr-agent
+WorkingDirectory=/home/agent
+Restart=always
+RestartSec=5
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=60
+# The agent runs commands through setuid sudo as rr-exec. For a non-root User=, systemd sets
+# no_new_privs for any seccomp-backed option (ProtectKernel*, ProtectClock/Hostname,
+# PrivateDevices, Restrict*, LockPersonality, SystemCallFilter...), so only mount options remain.
+NoNewPrivileges=no
+ProtectSystem=full
+ProtectControlGroups=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

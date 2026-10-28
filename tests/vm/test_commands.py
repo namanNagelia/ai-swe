@@ -42,6 +42,6 @@ def test_backup_pauses_agent_and_streams_home(tmp_path: Path) -> None:
 
     assert out.read_bytes() == b"TARBALL"
     stop, tar, start = runner.calls
-    assert stop[-3:] == ["stop", "rr-supervisor", "rr-tools"]
+    assert stop[-2:] == ["stop", "rr-agent"]
     assert "--exclude=agent/.local/share/docker" in tar
-    assert start[-3:] == ["start", "rr-tools", "rr-supervisor"]
+    assert start[-2:] == ["start", "rr-agent"]

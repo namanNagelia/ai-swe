@@ -9,10 +9,14 @@ dependencies = [
     "httpx>=0.28.1",
     "pydantic>=2.14.1",
     "sqlalchemy[asyncio]>=2.1.6",
+    "starlette>=1.10.0",
+    "uvicorn>=0.54.0",
 ]
 
 [project.scripts]
 rr = "rootorroute.cli:main"
+rr-agent = "rootorroute.main:main"
+rr-git-credential = "rootorroute.adapters.secrets.credential_helper:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.8", "pyright>=1.1.390", "import-linter>=2.1"]

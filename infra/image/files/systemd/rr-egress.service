@@ -2,7 +2,7 @@
 Description=Root or Route default-deny egress firewall
 DefaultDependencies=no
 After=local-fs.target
-Before=network-pre.target rr-tools.service rr-supervisor.service
+Before=network-pre.target rr-agent.service
 Wants=network-pre.target
 
 [Service]

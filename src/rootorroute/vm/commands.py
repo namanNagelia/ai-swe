@@ -13,7 +13,7 @@ from rootorroute.vm import bundle
 from rootorroute.vm.backends import Backend, BackendError, VMSpec, VMState
 
 BUNDLE_DIR = "/var/lib/rootorroute/image"
-SERVICES = ["rr-egress", "tinyproxy", "rr-tools", "rr-supervisor"]
+SERVICES = ["rr-egress", "tinyproxy", "rr-agent"]
 
 # Excluded from backups: rebuildable and large.
 BACKUP_EXCLUDES = ["agent/cache", "agent/.cache", "agent/.local/share/docker"]
@@ -106,11 +106,11 @@ def shell(backend: Backend, vm: str, user: str | None) -> int:
 
 
 def _stop_agent(backend: Backend, vm: str) -> None:
-    backend.exec(vm, ["sudo", "systemctl", "stop", "rr-supervisor", "rr-tools"], check=False)
+    backend.exec(vm, ["sudo", "systemctl", "stop", "rr-agent"], check=False)
 
 
 def _start_agent(backend: Backend, vm: str) -> None:
-    backend.exec(vm, ["sudo", "systemctl", "start", "rr-tools", "rr-supervisor"], check=False)
+    backend.exec(vm, ["sudo", "systemctl", "start", "rr-agent"], check=False)
 
 
 def backup(backend: Backend, vm: str, out: Path) -> None:

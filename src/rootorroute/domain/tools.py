@@ -114,7 +114,10 @@ def tools_for(phase: Phase) -> Sequence[ToolSpec]:
 def check_allowed(name: str, phase: Phase) -> ToolSpec:
     spec = TOOLS.get(name)
     if spec is None:
-        raise ToolNotAllowed(name, phase, "unknown_tool")
+        known = ", ".join(s.name for s in tools_for(phase))
+        raise ToolNotAllowed(
+            name, phase, "unknown_tool", f"unknown tool {name}; available: {known}"
+        )
     if phase not in spec.phases:
         raise ToolNotAllowed(name, phase, "wrong_phase")
     return spec

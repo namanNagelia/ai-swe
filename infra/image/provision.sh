@@ -269,15 +269,20 @@ EXEC_UID=$(id -u "$EXEC_USER")
 log "Laying out $AGENT_HOME"
 chown "$AGENT_USER:$AGENT_USER" "$AGENT_HOME"
 chmod 0711 "$AGENT_HOME"
-for d in state memory cache logs; do
+for d in state state/secrets memory cache logs repos; do
   install -d -o "$AGENT_USER" -g "$AGENT_USER" -m 0700 "$AGENT_HOME/$d"
 done
-# Worktrees live in repos/<repo>.git/worktrees too (index, HEAD), so the sandbox
-# user needs group write on both. Pushing still needs a token only rr-tools has.
-for d in repos worktrees; do
-  install -d -o "$AGENT_USER" -g "$WORK_GROUP" -m 2770 "$AGENT_HOME/$d"
-  setfacl -d -m "g:$WORK_GROUP:rwX" "$AGENT_HOME/$d"
-done
+# repos/ holds the agent-only mirrors that fetch and push. The sandbox must never be
+# able to write them: the agent runs git there, and repo config can run commands.
+# Undo the group access older images gave it.
+setfacl -bR "$AGENT_HOME/repos"
+chown -R "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/repos"
+chmod -R go-rwx "$AGENT_HOME/repos"
+chmod 00700 "$AGENT_HOME/repos"
+# worktrees/ holds the sandbox's working copies; every git command in them runs as
+# rr-exec. Code moves to the mirror only as a git bundle the agent fetches.
+install -d -o "$AGENT_USER" -g "$WORK_GROUP" -m 2770 "$AGENT_HOME/worktrees"
+setfacl -d -m "g:$WORK_GROUP:rwX" "$AGENT_HOME/worktrees"
 
 # ── Egress ───────────────────────────────────────────────────────────────────
 
@@ -319,17 +324,28 @@ visudo -cq -f /etc/sudoers.d/rootorroute || die "invalid sudoers drop-in"
 # ── Agent runtime Python ─────────────────────────────────────────────────────
 
 log "Installing Python $PYTHON_VERSION for the agent runtime"
+# Root owns the runtime; the agent can read and run it but not change it. `rr vm deploy`
+# installs the package into this venv.
 install -d -m 0755 "$RR_OPT"
 UV_PYTHON_INSTALL_DIR="$RR_OPT/python" /usr/local/bin/uv python install "$PYTHON_VERSION" --quiet
 if [[ ! -x "$RR_OPT/venv/bin/python" ]]; then
   UV_PYTHON_INSTALL_DIR="$RR_OPT/python" /usr/local/bin/uv venv --quiet --python "$PYTHON_VERSION" "$RR_OPT/venv"
 fi
+chown -R root:root "$RR_OPT/python" "$RR_OPT/venv"
+chmod -R a+rX,go-w "$RR_OPT/python" "$RR_OPT/venv"
 
 # ── systemd units ────────────────────────────────────────────────────────────
 
 log "Installing systemd units"
-for unit in rr-egress.service rr-tools.service rr-supervisor.service; do
+for unit in rr-egress.service rr-agent.service; do
   install -m 0644 "$FILES/systemd/$unit" "/etc/systemd/system/$unit"
+done
+# Replaced by rr-agent.service.
+for unit in rr-tools.service rr-supervisor.service; do
+  if [[ -f "/etc/systemd/system/$unit" ]]; then
+    have_systemd && systemctl disable --now "$unit" >/dev/null 2>&1 || true
+    rm -f "/etc/systemd/system/$unit"
+  fi
 done
 
 # ── Rootless Docker (needs a running systemd) ────────────────────────────────
@@ -380,8 +396,8 @@ if have_systemd; then
   as_agent systemctl --user enable docker.service >/dev/null 2>&1
   as_agent systemctl --user restart docker.service
 
-  # Inert until the agent package is installed (ConditionPathExists).
-  systemctl enable rr-tools.service rr-supervisor.service >/dev/null 2>&1
+  # Inert until `rr vm deploy` installs the package and config (ConditionPathExists).
+  systemctl enable rr-agent.service >/dev/null 2>&1
 fi
 
 if ! grep -q DOCKER_HOST "$AGENT_HOME/.profile" 2>/dev/null; then
