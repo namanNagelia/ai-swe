@@ -5,7 +5,7 @@
 [model]
 # OpenAI, or any server that speaks the OpenAI Responses API.
 provider = "openai_compat"
-model = "gpt-5"
+model = "gpt-6-luna"
 base_url = "https://api.openai.com/v1"
 api_key_secret = "model_api_key"      # rr vm secrets set model_api_key
 # tool_mode = "text"                  # for models without native tool calling

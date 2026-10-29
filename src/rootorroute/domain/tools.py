@@ -54,6 +54,21 @@ class Shell(Args):
     timeout_s: int = Field(120, ge=1, le=1800)
 
 
+class Screenshot(Args):
+    url: str = Field(
+        description="Page to capture, e.g. http://localhost:3000 (start the app first)."
+    )
+    full_page: bool = Field(False, description="Capture the whole scrollable page.")
+    wait_ms: int = Field(1000, ge=0, le=30_000, description="Wait this long after load.")
+    device: str | None = Field(None, description='Emulate a device, e.g. "iPhone 13".')
+    dark: bool = Field(False, description="Emulate dark mode.")
+    save_as: str | None = Field(
+        None,
+        pattern=r"^[a-z0-9][a-z0-9-]{0,40}$",
+        description="Keep it for the PR as .rr/screenshots/<save_as>.jpeg (e.g. home-after).",
+    )
+
+
 class CreateTicket(Args):
     title: str = Field(min_length=1, description="Short imperative title.")
     goal: str = Field(min_length=1, description="What exists after this ticket.")
@@ -93,6 +108,13 @@ _SPECS = (
         "search_code", SideEffect.NONE, BOTH, SearchCode, "Search file contents with a regex."
     ),
     ToolSpec("shell", SideEffect.LOCAL, BOTH, Shell, "Run a shell command in the repo."),
+    ToolSpec(
+        "screenshot",
+        SideEffect.LOCAL,
+        BOTH,
+        Screenshot,
+        "Open a URL in headless Chromium and look at it. Use save_as for shots the PR should show.",
+    ),
     ToolSpec("write_file", SideEffect.LOCAL, IMPLEMENT, WriteFile, "Create or overwrite a file."),
     ToolSpec(
         "edit_file", SideEffect.LOCAL, IMPLEMENT, EditFile, "Replace one exact string in a file."

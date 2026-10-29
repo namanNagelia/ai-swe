@@ -42,7 +42,12 @@ def to_text_history(messages: Sequence[Message], tools: Sequence[ToolSpec]) -> l
         elif m.role == "tool":
             call_id = m.tool_call_id or "?"
             name = names.get(call_id, "tool")
-            out.append(Message.user(f"Result of {name} (call {call_id}):\n{m.content}"))
+            note = (
+                f"\n[{len(m.images)} image(s) not shown: this model can't see images]"
+                if m.images
+                else ""
+            )
+            out.append(Message.user(f"Result of {name} (call {call_id}):\n{m.content}{note}"))
         else:
             out.append(m)
     if tools:

@@ -148,3 +148,8 @@ otel-data/
 *~
 .DS_Store
 Thumbs.db
+
+# Local agent configs (deploy.sh creates my-config.toml)
+my-config.toml
+*.local.toml
+.claude/CLAUDE.md

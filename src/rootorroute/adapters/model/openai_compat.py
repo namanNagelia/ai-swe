@@ -84,9 +84,13 @@ class OpenAICompatProvider:
 
 def _to_items(m: Message) -> list[dict[str, Any]]:
     if m.role == "tool":
-        return [
-            {"type": "function_call_output", "call_id": m.tool_call_id or "", "output": m.content}
-        ]
+        output: str | list[dict[str, Any]] = m.content
+        if m.images:
+            output = [{"type": "input_text", "text": m.content}] + [
+                {"type": "input_image", "image_url": f"data:{i.media_type};base64,{i.data}"}
+                for i in m.images
+            ]
+        return [{"type": "function_call_output", "call_id": m.tool_call_id or "", "output": output}]
     items: list[dict[str, Any]] = []
     if m.content or not m.tool_calls:
         items.append({"role": m.role, "content": m.content})

@@ -5,15 +5,39 @@ from rootorroute.domain.task import SourceKind
 from rootorroute.domain.ticket import Ticket
 from rootorroute.domain.workspace import Worktree
 
+SHOTS_DIR = ".rr/screenshots/"
 
-def pr_body(record: TaskRecord, tickets: list[Ticket], checks: str) -> str:
+
+def screenshots_section(repo: str, sha: str, changed: list[str]) -> list[str]:
+    shots = [f for f in changed if f.startswith(SHOTS_DIR) and f.endswith((".jpeg", ".png"))]
+    if not shots:
+        return []
+    lines = ["**Screenshots**", ""]
+    for path in shots:
+        name = path.removeprefix(SHOTS_DIR).rsplit(".", 1)[0]
+        lines.append(f"{name}:\n![{name}](https://github.com/{repo}/blob/{sha}/{path}?raw=true)\n")
+    lines.append(
+        f"_(Images live in `{SHOTS_DIR}` on this branch; delete it before merging if you like.)_"
+    )
+    return [*lines, ""]
+
+
+def pr_body(
+    record: TaskRecord, tickets: list[Ticket], checks: str, shots: list[str] | None = None
+) -> str:
     lines = [record.plan_summary or record.task.prompt, ""]
     if record.assumptions:
         lines += ["**Assumptions**", *(f"- {a}" for a in record.assumptions), ""]
     lines += ["**Tickets**"]
     for t in tickets:
         lines.append(f"- {t.ref} {t.title}" + (f": {t.summary}" if t.summary else ""))
-    lines += ["", f"**Checks:** {checks}", "", f"_Task {record.task.id}, by Root or Route._"]
+    lines += [
+        "",
+        *(shots or []),
+        f"**Checks:** {checks}",
+        "",
+        f"_Task {record.task.id}, by Root or Route._",
+    ]
     return "\n".join(lines)
 
 
@@ -41,12 +65,14 @@ async def deliver(deps: Deps, record: TaskRecord, worktree: Worktree, checks: st
             if existing is not None:
                 return {"url": existing.url, "number": existing.number}
             tickets = await deps.store.tickets(task_id)
+            changed = await deps.workspace.changed_files(worktree)
+            shots = screenshots_section(repo, sha, changed)
             pr = await code_host.open_pr(
                 repo,
                 worktree.branch,
                 worktree.base_branch,
                 _title(record),
-                pr_body(record, tickets, checks),
+                pr_body(record, tickets, checks, shots),
             )
             return {"url": pr.url, "number": pr.number}
 

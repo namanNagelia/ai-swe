@@ -17,11 +17,20 @@ class ToolCall:
 
 
 @dataclass(frozen=True, slots=True)
+class Image:
+    media_type: str  # image/png, image/jpeg
+    data: str  # base64
+    width: int = 0
+    height: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class Message:
     role: Role
     content: str
     tool_calls: tuple[ToolCall, ...] = ()
     tool_call_id: str | None = None
+    images: tuple[Image, ...] = ()  # only on role="tool" results
 
     @staticmethod
     def system(content: str) -> "Message":
@@ -32,8 +41,8 @@ class Message:
         return Message("user", content)
 
     @staticmethod
-    def tool_result(call_id: str, content: str) -> "Message":
-        return Message("tool", content, tool_call_id=call_id)
+    def tool_result(call_id: str, content: str, images: tuple[Image, ...] = ()) -> "Message":
+        return Message("tool", content, tool_call_id=call_id, images=images)
 
 
 @dataclass(frozen=True, slots=True)

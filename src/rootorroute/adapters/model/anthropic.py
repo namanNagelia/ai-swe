@@ -129,8 +129,17 @@ def convert_messages(
             role, blocks = "user", [{"type": "text", "text": m.content}]
         elif m.role == "tool":
             role = "user"
+            content: Any = m.content
+            if m.images:
+                content = [{"type": "text", "text": m.content}] + [
+                    {
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": i.media_type, "data": i.data},
+                    }
+                    for i in m.images
+                ]
             blocks = [
-                {"type": "tool_result", "tool_use_id": m.tool_call_id or "", "content": m.content}
+                {"type": "tool_result", "tool_use_id": m.tool_call_id or "", "content": content}
             ]
         else:
             role = "assistant"

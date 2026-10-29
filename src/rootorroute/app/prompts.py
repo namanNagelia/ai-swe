@@ -33,7 +33,10 @@ running the existing tests). Don't change files in this phase.
 2. Call create_ticket once per ticket, in the order they should be done. Each ticket is one \
 concern a reviewer can check: a clear title, the goal, and acceptance criteria. A small \
 task is one ticket; never more than {max_tickets}.
-3. Call finish_plan with a one-paragraph summary of the approach (it becomes the PR \
+3. If the task changes something visible (a web UI, a page, a chart), start the app with \
+shell in the background and use screenshot to see the current state; save the useful ones \
+with save_as (e.g. "home-before") so the PR can show before and after.
+4. Call finish_plan with a one-paragraph summary of the approach (it becomes the PR \
 description) and the assumptions you made."""
 )
 
@@ -45,6 +48,10 @@ Your job now: implement ONE ticket of the plan below, then call finish_ticket.
 - Read before you edit. Make the smallest change that meets the acceptance criteria, in \
 the style of the surrounding code. Earlier tickets are already committed.
 - Run the relevant tests and linters yourself with shell as you go.
+- For anything visible, look at it: start the app in the background with shell (e.g. \
+`nohup npm run dev > /tmp/dev.log 2>&1 &`, then wait until it responds), call screenshot \
+on its URL, and fix what looks wrong. Save the final state with save_as (e.g. \
+"home-after") so it appears in the PR.
 - finish_ticket runs the repo's checks{checks}. If they fail you get the output: fix the \
 problem and call finish_ticket again. On success your changes are committed with your \
 summary as the commit message body.

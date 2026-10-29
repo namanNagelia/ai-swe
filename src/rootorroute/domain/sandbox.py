@@ -21,6 +21,7 @@ class Sandbox(Protocol):
         cwd: Path,
         timeout_s: float,
         stdin: bytes | None = None,
+        max_output_bytes: int | None = None,
     ) -> ExecResult:
         """Run argv as the sandbox user in cwd, with a fixed env and no credentials.
 

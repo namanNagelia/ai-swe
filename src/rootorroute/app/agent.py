@@ -58,7 +58,7 @@ async def run_agent(
             continue
         for call in reply.tool_calls:
             result = await executor.execute(call, ctx)
-            messages.append(Message.tool_result(call.id, result.content))
+            messages.append(Message.tool_result(call.id, result.content, result.images))
             if result.ok and call.name in stop_tools:
                 return AgentResult(call.name, call.args)
 
@@ -80,7 +80,10 @@ def replay(steps: Sequence[Step], stop_tools: frozenset[str]) -> list[Message]:
         else:
             call_id = step.request.get("call_id", "")
             if call_id in pending:
-                out.append(Message.tool_result(call_id, step.response.get("content", "")))
+                content = step.response.get("content", "")
+                if step.response.get("images"):
+                    content += "\n[screenshot was shown here; take it again to look]"
+                out.append(Message.tool_result(call_id, content))
                 pending.discard(call_id)
     for call_id in pending:
         out.append(Message.tool_result(call_id, "[interrupted before this tool ran; call again]"))

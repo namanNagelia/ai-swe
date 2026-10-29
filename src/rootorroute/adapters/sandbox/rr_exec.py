@@ -108,6 +108,7 @@ class RrExecSandbox:
         cwd: Path,
         timeout_s: float,
         stdin: bytes | None = None,
+        max_output_bytes: int | None = None,
     ) -> ExecResult:
         result, outer_fired = await run_captured(
             self._command(argv, cwd, timeout_s),
@@ -115,7 +116,7 @@ class RrExecSandbox:
             env={"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"},
             stdin=stdin,
             deadline_s=timeout_s + _OUTER_SLACK_S,
-            max_output_bytes=self._max_output_bytes,
+            max_output_bytes=max_output_bytes or self._max_output_bytes,
             kill=_kill_sudo,
         )
         code = result.exit_code

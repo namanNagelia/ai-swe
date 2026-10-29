@@ -28,6 +28,7 @@ class LocalSandbox:
         cwd: Path,
         timeout_s: float,
         stdin: bytes | None = None,
+        max_output_bytes: int | None = None,
     ) -> ExecResult:
         result, _ = await run_captured(
             list(argv),
@@ -35,7 +36,7 @@ class LocalSandbox:
             env=self._env,
             stdin=stdin,
             deadline_s=timeout_s,
-            max_output_bytes=self._max_output_bytes,
+            max_output_bytes=max_output_bytes or self._max_output_bytes,
             kill=self._kill,
         )
         return result

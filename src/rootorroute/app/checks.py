@@ -1,3 +1,4 @@
+import json
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,7 +30,7 @@ async def resolve_checks(sandbox: Sandbox, worktree: Path) -> list[str]:
     ls = await sandbox.run(["ls", "-a"], worktree, 30)
     files = set(ls.stdout.split())
     if "package.json" in files:
-        return ["npm test --silent"]
+        return await _npm_checks(sandbox, worktree)
     if "go.mod" in files:
         return ["go test ./..."]
     if "Cargo.toml" in files:
@@ -38,6 +39,19 @@ async def resolve_checks(sandbox: Sandbox, worktree: Path) -> list[str]:
         runner = "uv run pytest -q" if "uv.lock" in files else "python3 -m pytest -q"
         return [runner]
     return []
+
+
+async def _npm_checks(sandbox: Sandbox, worktree: Path) -> list[str]:
+    r = await sandbox.run(["cat", "--", "package.json"], worktree, 30)
+    try:
+        data: object = json.loads(r.stdout)
+    except json.JSONDecodeError:
+        return []
+    scripts = cast(dict[str, object], data).get("scripts") if isinstance(data, dict) else None
+    test = cast(dict[str, object], scripts).get("test") if isinstance(scripts, dict) else None
+    if not isinstance(test, str) or "no test specified" in test:
+        return []
+    return ["npm test --silent"]
 
 
 async def run_checks(sandbox: Sandbox, worktree: Path, checks: list[str]) -> CheckRun:

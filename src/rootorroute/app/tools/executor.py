@@ -4,20 +4,21 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from rootorroute.app.tools.context import ToolContext, ToolFailed
+from rootorroute.app.tools.context import ToolContext, ToolFailed, ToolOutput
 from rootorroute.app.tools.truncate import DEFAULT_MAX_CHARS, truncate
 from rootorroute.domain.errors import DomainError
-from rootorroute.domain.model import ToolCall
+from rootorroute.domain.model import Image, ToolCall
 from rootorroute.domain.store import Store
 from rootorroute.domain.tools import Args, check_allowed
 
-Handler = Callable[[Any, ToolContext], Awaitable[str]]
+Handler = Callable[[Any, ToolContext], Awaitable[str | ToolOutput]]
 
 
 @dataclass(frozen=True, slots=True)
 class ToolResult:
     ok: bool
     content: str
+    images: tuple[Image, ...] = ()
 
 
 class ToolExecutor:
@@ -38,14 +39,18 @@ class ToolExecutor:
 
     async def execute(self, call: ToolCall, ctx: ToolContext) -> ToolResult:
         result = await self._run(call, ctx)
-        result = ToolResult(result.ok, truncate(self._redact(result.content), self._max_chars))
+        content = truncate(self._redact(result.content), self._max_chars)
+        result = ToolResult(result.ok, content, result.images)
+        response: dict[str, Any] = {"ok": result.ok, "content": result.content}
+        if result.images:
+            response["images"] = [f"{i.media_type} {i.width}x{i.height}" for i in result.images]
         await self._store.record_step(
             ctx.task_id,
             ctx.phase,
             ctx.ticket_seq,
             "tool",
             {"call_id": call.id, "tool": call.name, "args": call.args},
-            {"ok": result.ok, "content": result.content},
+            response,
         )
         return result
 
@@ -58,7 +63,10 @@ class ToolExecutor:
             if handler is None:
                 return ToolResult(False, f"{spec.name} is not available right now")
             args: Args = spec.args.model_validate(call.args)
-            return ToolResult(True, await handler(args, ctx))
+            out = await handler(args, ctx)
+            if isinstance(out, ToolOutput):
+                return ToolResult(True, out.text, out.images)
+            return ToolResult(True, out)
         except ValidationError as e:
             problems = "; ".join(
                 f"{'.'.join(str(p) for p in err['loc']) or 'args'}: {err['msg']}"

@@ -56,7 +56,8 @@ Tickets inside a task are `todo → done`. Phases: `plan`, `implement`.
 
 ### Tools and side-effect classes
 
-`none` (read_file, list_files, search_code) · `local` (write_file, edit_file, shell) ·
+`none` (read_file, list_files, search_code) · `local` (write_file, edit_file, shell,
+screenshot: headless Chromium; images go to the model, `save_as` shots go in the PR) ·
 `state` (create_ticket, finish_plan, finish_ticket). Plan phase gets
 read-only tools + planning tools. git commit/push, PRs and comments are done by the
 runtime (`external`), never exposed as tools.

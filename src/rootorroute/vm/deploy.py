@@ -4,6 +4,7 @@ import getpass
 import os
 import re
 import shlex
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -149,7 +150,13 @@ def _check_name(name: str) -> None:
 
 def set_secret(backend: Backend, vm: str, name: str) -> None:
     _check_name(name)
-    value = getpass.getpass(f"{name}: ").encode()
+    try:
+        if sys.stdin.isatty():
+            value = getpass.getpass(f"{name}: ").encode()
+        else:
+            value = sys.stdin.readline().strip().encode()
+    except EOFError:
+        raise BackendError("no input; nothing written") from None
     if not value:
         raise BackendError("empty value; nothing written")
     if len(value) > 60_000:
